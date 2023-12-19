@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -11,11 +12,13 @@ import (
 )
 
 type User struct {
-	Username string
-	Password string
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
-var secretKey = []byte("secret-key")
+var (
+	secretKey = []byte(os.Getenv("SECRET_KEY"))
+)
 
 func createToken(username string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -29,39 +32,49 @@ func createToken(username string) (string, error) {
 	return tokenString, nil
 }
 
-func verifyToken(tokenString string) error {
+func verifyToken(tokenString string) (*jwt.Token, error) {
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 		return secretKey, nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !token.Valid {
-		return fmt.Errorf("invalid token")
+		return nil, fmt.Errorf("invalid token")
 	}
-	return nil
+	return token, nil
+}
+
+func authenticateUser(username, password string) bool {
+	// Implement user authentication logic here (e.g., check against a database)
+	return username == "Chek" && password == "qwerty"
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var u User
-	json.NewDecoder(r.Body).Decode(&u)
-	fmt.Printf("The user requested value %v", u)
+	err := json.NewDecoder(r.Body).Decode(&u)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Error decoding request body: %v", err)
+		return
+	}
 
-	if u.Username == "Chek" && u.Password == "qwerty" {
+	if authenticateUser(u.Username, u.Password) {
 		tokenString, err := createToken(u.Username)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Errorf("No username found")
+			fmt.Fprintf(w, "Error creating token: %v", err)
+			return
 		}
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, tokenString)
 		return
-	} else {
-		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "invalid credentials")
 	}
+
+	w.WriteHeader(http.StatusUnauthorized)
+	fmt.Fprint(w, "Invalid credentials")
 }
 
 func ProtectedHandler(w http.ResponseWriter, r *http.Request) {
@@ -73,13 +86,17 @@ func ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tokenString = tokenString[len("Bearer "):]
-	err := verifyToken(tokenString)
+	token, err := verifyToken(tokenString)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "invalid token")
+		fmt.Fprintf(w, "Invalid token: %v", err)
 		return
 	}
-	fmt.Fprint(w, "Welcome to protected area!s")
+	// Extract claims if needed
+	claims := token.Claims.(jwt.MapClaims)
+	username := claims["username"].(string)
+
+	fmt.Fprintf(w, "Welcome to protected area, %s!", username)
 }
 
 func main() {
@@ -88,6 +105,7 @@ func main() {
 	router.HandleFunc("/protected", ProtectedHandler).Methods("GET")
 
 	fmt.Println("Starting Server")
+
 	err := http.ListenAndServe("localhost:4000", router)
 	if err != nil {
 		fmt.Println("Could not start the server", err)

@@ -43,7 +43,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 func StartApplication() {
 	router := mux.NewRouter()
-	router.HandleFunc("/login", loginHandler).Methods("POST")
+	router.HandleFunc("/login", loginHandler).Methods("GET")
 
 	log.Println("server starting.. listening on port 4000")
 	err := http.ListenAndServe("localhost:4000", router)

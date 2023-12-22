@@ -2,7 +2,6 @@ package db
 
 import (
 	"os"
-	"path/filepath"
 
 	"github.com/go-yaml/yaml"
 	"github.com/sohail-9098/ms-user-auth/util"
@@ -17,7 +16,7 @@ type DbConfig struct {
 }
 
 var (
-	configFileName string = filepath.Join(getWorkDir(), "config/config.yaml")
+	configFileName string = "config.yaml"
 )
 
 func loadConfig() (DbConfig, error) {

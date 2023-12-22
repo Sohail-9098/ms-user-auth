@@ -2,18 +2,19 @@ package db
 
 import (
 	"database/sql"
-	"log"
+	"fmt"
 
 	_ "github.com/lib/pq"
 	"github.com/sohail-9098/ms-user-auth/user"
+	"github.com/sohail-9098/ms-user-auth/util"
 )
 
 func connect() *sql.DB {
-	connStr := "user=postgres password=pg@123 dbname=ms_user_auth sslmode=disable"
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		log.Fatal("error connecting to database: ", err)
-	}
+	config, err := loadConfig()
+	util.HandleError("error loading config: ", err)
+	connStr := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s", config.User, config.Password, config.DbName, config.SslMode)
+	db, err := sql.Open(config.Db, connStr)
+	util.HandleError("error connecting to database: ", err)
 	return db
 }
 
@@ -23,21 +24,17 @@ func FetchUser(username string) user.User {
 
 	query := "SELECT user_name, password FROM users WHERE user_name=$1"
 	rows, err := db.Query(query, username)
-	if err != nil {
-		log.Fatal("query failed: ", err)
-	}
+	util.HandleError("query failed: ", err)
 	defer rows.Close()
 
 	var user user.User
 	for rows.Next() {
 		err := rows.Scan(&user.Username, &user.Password)
-		if err != nil {
-			log.Fatal("scan failed: ", err)
-		}
+		util.HandleError("scan failed: ", err)
 	}
 
 	if err := rows.Err(); err != nil {
-		log.Fatal("error in rows: ", err)
+		util.HandleError("query failed: ", err)
 	}
 
 	return user

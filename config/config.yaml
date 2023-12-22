@@ -1,0 +1,5 @@
+db: postgres
+user: postgres
+password: pg@123
+dbname: ms_user_auth
+sslmode: disable

@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sohail-9098/ms-user-auth/auth"
 	"github.com/sohail-9098/ms-user-auth/user"
+	"github.com/sohail-9098/ms-user-auth/util"
 )
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,6 +22,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "error decoding request body: %v", err)
 		return
 	}
+
+	u.Password = util.HashPassword(u.Password)
 
 	if auth.AuthenticateUser(u.Username, u.Password) {
 		tokenString, err := auth.CreateToken(u.Username, 60)

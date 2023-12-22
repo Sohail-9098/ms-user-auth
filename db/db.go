@@ -12,6 +12,7 @@ import (
 func connect() *sql.DB {
 	config, err := loadConfig()
 	util.HandleError("error loading config: ", err)
+	config.Password = util.DecodePassword(config.Password)
 	connStr := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s", config.User, config.Password, config.DbName, config.SslMode)
 	db, err := sql.Open(config.Db, connStr)
 	util.HandleError("error connecting to database: ", err)

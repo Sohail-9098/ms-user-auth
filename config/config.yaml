@@ -1,5 +1,5 @@
 db: postgres
 user: postgres
-password: pg@123
+password: cGdAMTIz #base64 encoded
 dbname: ms_user_auth
 sslmode: disable

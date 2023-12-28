@@ -19,7 +19,17 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&u)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		if err.Error() == "EOF" {
+			fmt.Fprintf(w, "request body should not be empty")
+			return
+		}
 		fmt.Fprintf(w, "error decoding request body: %v", err)
+		return
+	}
+
+	if u.Username == "" || u.Password == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "request missing username or password field")
 		return
 	}
 

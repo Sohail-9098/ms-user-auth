@@ -13,11 +13,11 @@ type DbConfig struct {
 	Db       string `yaml:"db"`
 }
 
-const configFileName string = "config.yaml"
+const configFilePath string = "/usr/local/bin/config.yaml"
 
 func LoadConfig() (DbConfig, error) {
 	var config DbConfig
-	file, err := util.OpenFile(configFileName)
+	file, err := util.OpenFile(configFilePath)
 	if err != nil{
 		return DbConfig{}, err
 	}

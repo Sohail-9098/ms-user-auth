@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	serverAddress = "localhost:4000"
+	serverAddress = "0.0.0.0:4000"
 )
 
 func StartApplication() {

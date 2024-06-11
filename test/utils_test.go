@@ -11,7 +11,7 @@ func TestDb_OpenCloseFile(t *testing.T) {
 	// Arrage
 	configFileName := "../config.yaml"
 	// Act
-	file := util.OpenFile(configFileName)
+	file, err := util.OpenFile(configFileName)
 	err := file.Close()
 	// Assert
 	require.NoError(t, err, "error closing file")

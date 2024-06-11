@@ -13,7 +13,7 @@ import (
 
 func TestE2E_Login(t *testing.T) {
 	utils.StartApp()
-	user := &user.User{Username: "Chek", Password: "qwerty"}
+	user := &user.Credentials{Username: "Chek", Password: "qwerty"}
 	userJson, err := json.Marshal(user)
 	require.NoError(t, err, nil)
 	req, err := http.NewRequest("GET", "http://localhost:4000/login", bytes.NewBuffer(userJson))

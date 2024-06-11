@@ -2,7 +2,9 @@ package router
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -12,52 +14,91 @@ import (
 	"github.com/sohail-9098/ms-user-auth/util"
 )
 
+const (
+	serverAddress = "localhost:4000"
+)
+
+func StartApplication() {
+	router := setupRouter()
+	log.Println("server started - listening on ", serverAddress)
+	if err := http.ListenAndServe(serverAddress, router); err != nil {
+		log.Fatalf("could not start the server: %v\n", err)
+	}
+}
+
+// sets up a gorilla mux router
+func setupRouter() *mux.Router {
+	router := mux.NewRouter()
+	router.HandleFunc("/login", loginHandler).Methods("GET")
+	return router
+}
+
+// handler func for /login
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var u user.User
-	err := json.NewDecoder(r.Body).Decode(&u)
-	if err != nil {
+	var user user.Credentials
+
+	// decode request body
+	if err := decodeBody(r.Body, &user); err != nil {
+		log.Printf("error decoding request body: %v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
-		if err.Error() == "EOF" {
-			fmt.Fprintf(w, "request body should not be empty")
-			return
-		}
 		fmt.Fprintf(w, "error decoding request body: %v", err)
 		return
 	}
 
-	if u.Username == "" || u.Password == "" {
+	// validate user fields
+	if err := validateUserFields(user); err != nil {
+		log.Printf("error validating request body: %v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "request missing username or password field")
+		fmt.Fprintf(w, "error validating request body: %v", err)
 		return
 	}
 
-	u.Password = util.HashPassword(u.Password)
+	// hash password
+	user.Password = util.HashPassword(user.Password)
 
-	if auth.AuthenticateUser(u.Username, u.Password) {
-		tokenString, err := auth.CreateToken(u.Username, 60)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "error creating token: %v", err)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, tokenString)
+	// authenticate against DB
+	authorized, err := auth.AuthenticateUser(user.Username, user.Password)
+	if err != nil {
+		log.Printf("error while authenticating : %v\n", err)
+		fmt.Fprintf(w, "error while authenticating: %v", err)
+		return
+	}
+	if !authorized {
+		log.Printf("error while authenticating : %v\n", "invalid credentials")
+		fmt.Fprintf(w, "error while authenticating: %v", "invalid credentials")
 		return
 	}
 
-	w.WriteHeader(http.StatusUnauthorized)
-	fmt.Fprint(w, "invalid credentials")
+	// create token on successful authentication
+	tokenString, err := auth.CreateToken(user.Username, 60)
+	if err != nil {
+		log.Printf("error while creating token : %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "error creating token: %v", err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, tokenString)
 }
 
-func StartApplication() {
-	router := mux.NewRouter()
-	router.HandleFunc("/login", loginHandler).Methods("GET")
-
-	log.Println("server starting.. listening on port 4000")
-	err := http.ListenAndServe("localhost:4000", router)
-	if err != nil {
-		fmt.Println("could not start the server", err)
+// decode request body
+func decodeBody(body io.ReadCloser, user *user.Credentials) error {
+	if err := json.NewDecoder(body).Decode(&user); err != nil {
+		if err.Error() == "EOF" {
+			return errors.New("request body should not be empty")
+		}
+		return err
 	}
+	return nil
+}
+
+// validate user fields
+// such as username, password must be present
+func validateUserFields(user user.Credentials) error {
+	if user.Username == "" || user.Password == "" {
+		return errors.New("request missing username or password field")
+	}
+	return nil
 }

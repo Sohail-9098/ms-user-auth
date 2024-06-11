@@ -1,8 +1,6 @@
 package db
 
 import (
-	"os"
-
 	"github.com/go-yaml/yaml"
 	"github.com/sohail-9098/ms-user-auth/util"
 )
@@ -15,23 +13,21 @@ type DbConfig struct {
 	Db       string `yaml:"db"`
 }
 
-var (
-	configFileName string = "config.yaml"
-)
+const configFileName string = "config.yaml"
 
-func loadConfig() (DbConfig, error) {
+func LoadConfig() (DbConfig, error) {
 	var config DbConfig
-	file := util.OpenFile(configFileName)
+	file, err := util.OpenFile(configFileName)
+	if err != nil{
+		return DbConfig{}, err
+	}
 	defer file.Close()
 
 	decoder := yaml.NewDecoder(file)
-	err := decoder.Decode(&config)
-	util.HandleError("error umarshal file: ", err)
-	return config, nil
-}
+	err = decoder.Decode(&config)
+	if err!=nil{
+		return DbConfig{}, err
+	}
 
-func getWorkDir() string {
-	cwd, err := os.Getwd()
-	util.HandleError("error get working dir: ", err)
-	return cwd
+	return config, nil
 }
